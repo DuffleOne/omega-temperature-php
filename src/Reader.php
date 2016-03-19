@@ -56,6 +56,13 @@ class Reader
     private $preg_match = "/T(.)(\\d+.\\d+)(F|C)/";
 
     /**
+     * Should the socket be maintained?
+     *
+     * @var bool
+     */
+    private $maintain = false;
+
+    /**
      * Reader constructor.
      *
      * @param string $address
@@ -99,26 +106,40 @@ class Reader
     /**
      * Read from the socket, grab the result, then close it all down.
      *
+     * @return \Generator|array
      * @throws ReaderException
      */
     public function run()
     {
         $this->connect();
 
-        $matched = $this->channels;
-        while (($result = socket_read($this->socket, 2048, PHP_BINARY_READ)) && !empty($matched)) {
-            list($original, $channel, $temperature, $format) = $this->format($result);
+        if (!$this->maintain) {
+            $matched = $this->channels;
+            while (($result = socket_read($this->socket, 2048, PHP_BINARY_READ)) && !empty($matched)) {
+                list($original, $channel, $temperature, $format) = $this->format($result);
 
-            $this->result[$channel] = [
-                'original'    => $original,
-                'channel'     => $channel,
-                'temperature' => $temperature,
-                'format'      => $format,
-            ];
+                $this->result[$channel] = [
+                    'original'    => $original,
+                    'channel'     => $channel,
+                    'temperature' => $temperature,
+                    'format'      => $format,
+                ];
 
-            if (in_array($channel, $matched)) {
-                $key = array_search($channel, $matched, true);
-                unset($matched[$key]);
+                if (in_array($channel, $matched)) {
+                    $key = array_search($channel, $matched, true);
+                    unset($matched[$key]);
+                }
+            }
+        } else {
+            while (($result = socket_read($this->socket, 2048, PHP_BINARY_READ))) {
+                list($original, $channel, $temperature, $format) = $this->format($result);
+                $result = [
+                    'original'    => $original,
+                    'channel'     => $channel,
+                    'temperature' => $temperature,
+                    'format'      => $format,
+                ];
+                yield($result);
             }
         }
 
@@ -188,5 +209,17 @@ class Reader
     public function getAll()
     {
         return $this->result;
+    }
+
+    /**
+     * Should the socket be maintained?
+     *
+     * @return $this
+     */
+    public function maintain()
+    {
+        $this->maintain = !$this->maintain;
+
+        return $this;
     }
 }
