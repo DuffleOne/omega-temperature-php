@@ -106,40 +106,27 @@ class Reader
     /**
      * Read from the socket, grab the result, then close it all down.
      *
-     * @return \Generator|array
+     * @return \Generator|void
      * @throws ReaderException
      */
     public function run()
     {
         $this->connect();
 
-        if (!$this->maintain) {
-            $matched = $this->channels;
-            while (($result = socket_read($this->socket, 2048, PHP_BINARY_READ)) && !empty($matched)) {
-                list($original, $channel, $temperature, $format) = $this->format($result);
+        $matched = $this->channels;
+        while (($result = socket_read($this->socket, 2048, PHP_BINARY_READ)) && !empty($matched)) {
+            list($original, $channel, $temperature, $format) = $this->format($result);
 
-                $this->result[$channel] = [
-                    'original'    => $original,
-                    'channel'     => $channel,
-                    'temperature' => $temperature,
-                    'format'      => $format,
-                ];
+            $this->result[$channel] = [
+                'original'    => $original,
+                'channel'     => $channel,
+                'temperature' => $temperature,
+                'format'      => $format,
+            ];
 
-                if (in_array($channel, $matched)) {
-                    $key = array_search($channel, $matched, true);
-                    unset($matched[$key]);
-                }
-            }
-        } else {
-            while (($result = socket_read($this->socket, 2048, PHP_BINARY_READ))) {
-                list($original, $channel, $temperature, $format) = $this->format($result);
-                $result = [
-                    'original'    => $original,
-                    'channel'     => $channel,
-                    'temperature' => $temperature,
-                    'format'      => $format,
-                ];
-                yield($result);
+            if (in_array($channel, $matched)) {
+                $key = array_search($channel, $matched, true);
+                unset($matched[$key]);
             }
         }
 
@@ -163,7 +150,8 @@ class Reader
      *
      * @throws SocketException
      */
-    private function checkConnection()
+    private
+    function checkConnection()
     {
         if ($this->connection === false) {
             throw new SocketException(socket_strerror(socket_last_error($this->socket)));
@@ -175,8 +163,10 @@ class Reader
      * @return array
      * @throws ReaderException
      */
-    public function format($input_line)
-    {
+    public
+    function format(
+        $input_line
+    ) {
         $output_array = [];
         preg_match($this->preg_match, $input_line, $output_array);
         if (empty($output_array)) {
@@ -189,24 +179,44 @@ class Reader
     /**
      * Disconnect from the socket.
      */
-    private function disconnect()
+    private
+    function disconnect()
     {
         socket_close($this->socket);
+    }
+
+    public function runGenerator()
+    {
+        $this->connect();
+        while (($result = socket_read($this->socket, 2048, PHP_BINARY_READ))) {
+            list($original, $channel, $temperature, $format) = $this->format($result);
+            $result = [
+                'original'    => $original,
+                'channel'     => $channel,
+                'temperature' => $temperature,
+                'format'      => $format,
+            ];
+            yield($result);
+        }
+        $this->disconnect();
     }
 
     /**
      * @param $channel
      * @return mixed
      */
-    public function get($channel)
-    {
+    public
+    function get(
+        $channel
+    ) {
         return $this->result[$channel];
     }
 
     /**
      * @return array
      */
-    public function getAll()
+    public
+    function getAll()
     {
         return $this->result;
     }
@@ -216,7 +226,8 @@ class Reader
      *
      * @return $this
      */
-    public function maintain()
+    public
+    function maintain()
     {
         $this->maintain = !$this->maintain;
 
