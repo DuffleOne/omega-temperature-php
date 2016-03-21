@@ -2,6 +2,7 @@
 
 namespace Duffleman\Temperature;
 
+use Duffleman\Temperature\Exceptions\ReaderException;
 use Duffleman\Temperature\Exceptions\SocketException;
 
 /**
