@@ -54,7 +54,7 @@ class Reader
      *
      * @var string
      */
-    private $preg_match = "/T(.)(\\d+.\\d+)(F|C)/";
+    private $preg_match = "/T(.)(.+.\\d+)(F|C)/";
 
     /**
      * Should the socket be maintained?
